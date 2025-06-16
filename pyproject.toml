@@ -30,8 +30,9 @@ dev = [
     "tox-uv>=1.11.3",
     "deptry>=0.23.0",
     "mypy>=0.991",
-    "pytest-cov>=4.0.0",
     "ruff>=0.11.5",
+]
+docs = [
     "mkdocs>=1.4.2",
     "mkdocs-material>=8.5.10",
     "mkdocstrings[python]>=0.26.1",
@@ -114,4 +115,3 @@ skip_empty = true
 [tool.coverage.run]
 branch = true
 source = ["src"]
-
