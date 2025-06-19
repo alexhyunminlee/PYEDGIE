@@ -2,27 +2,43 @@
 // README at: https://github.com/devcontainers/templates/tree/main/src/python
 {
     "name": "PYEDGIE",
-    // Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-    "image": "mcr.microsoft.com/devcontainers/python:1-3.11-bullseye",
-    "runArgs": [
-        // avoid UID/GID remapping under rootless Podman
-        "--userns=keep-id"
-      ],
-    "features": {},
+    // Use a Dockerfile for more control over the environment
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+
+    // Use 'forwardPorts' to make a list of ports inside the container available locally.
+    "forwardPorts": [],
 
     // Use 'postCreateCommand' to run commands after the container is created.
     "postCreateCommand": "./.devcontainer/postCreateCommand.sh",
 
+    // Comment out connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+    "remoteUser": "vscode",
+
+    "features": {},
+
     // Configure tool-specific properties.
     "customizations": {
         "vscode": {
-            "extensions": ["ms-python.python", "editorconfig.editorconfig"],
+            "extensions": [
+                "ms-python.python",
+                "editorconfig.editorconfig",
+                "ms-python.black-formatter",
+                "ms-python.flake8",
+                "ms-python.mypy-type-checker",
+                "charliermarsh.ruff"
+            ],
             "settings": {
                 "python.testing.pytestArgs": ["tests"],
                 "python.testing.unittestEnabled": false,
                 "python.testing.pytestEnabled": true,
                 "python.defaultInterpreterPath": "/workspaces/PYEDGIE/.venv/bin/python",
-                "python.testing.pytestPath": "/workspaces/PYEDGIE/.venv/bin/pytest"
+                "python.testing.pytestPath": "/workspaces/PYEDGIE/.venv/bin/pytest",
+                "python.formatting.provider": "black",
+                "python.linting.enabled": true,
+                "python.linting.flake8Enabled": true,
+                "python.linting.mypyEnabled": true
             }
         }
     }
