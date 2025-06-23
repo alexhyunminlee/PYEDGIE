@@ -6,7 +6,8 @@ authors = [{ name = "Alex Lee", email = "lee3742@purdue.edu" }]
 readme = "README.md"
 keywords = ['python']
 requires-python = ">=3.9,<4.0"
-dependencies = []
+dependencies = [
+]
 classifiers = [
     "Intended Audience :: Developers",
     "Programming Language :: Python",
