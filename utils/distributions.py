@@ -14,6 +14,7 @@ INVALID_STD_DEV_MSG = "gauss: Standard deviation should be a positive number"
 MISSING_BOUNDS_MSG = "gauss: Both a and b must be provided when mean or std_dev are not specified."
 TRIRND_INVALID_BOUNDS_MSG = "trirnd: The upper bound must be strictly greater than the lower bound"
 TRIRND_INVALID_PEAK_MSG = "trirnd: The peak must be between the lower and upper bound, inclusive."
+UNIFORM_INVALID_BOUNDS_MSG = "uniform: lower bound must be strictly smaller than the upper bound."
 
 
 def gauss(m: int, n: int, a: Optional[float] = None, b: Optional[float] = None, mean=None, std_dev=None):
@@ -84,3 +85,22 @@ def trirnd(a: float, c: float, m: int, n: int, mode=None):
     # Generate a random sample from a triangular distribution with specified lower bound, mode, and upper bound
     np.random.seed(seed=int(time.time()))
     return np.random.triangular(a, mode, c, size=(m, n)).tolist()
+
+
+def uniform(a, b):
+    """
+    Picks a random number from a uniform distribution between lower_bound and upper_bound.
+
+    Parameters:
+    - a (float): The lower bound of the range.
+    - b (float): The upper bound of the range.
+
+    Returns:
+    - float: A random number between lower_bound and upper_bound.
+    """
+    if a >= b:
+        raise ValueError(UNIFORM_INVALID_BOUNDS_MSG)
+
+    # Generate a random sample from a uniform distribution with specified lower bound and upper bound
+    np.random.seed(seed=int(time.time()))
+    return np.random.uniform(a, b)
