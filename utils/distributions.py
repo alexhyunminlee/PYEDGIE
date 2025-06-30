@@ -1,5 +1,5 @@
 import time
-from typing import Optional
+from typing import Any, Optional
 
 import numpy as np
 
@@ -17,9 +17,17 @@ TRIRND_INVALID_PEAK_MSG = "trirnd: The peak must be between the lower and upper 
 UNIFORM_INVALID_BOUNDS_MSG = "uniform: lower bound must be strictly smaller than the upper bound."
 
 
-def gauss(m: int, n: int, a: Optional[float] = None, b: Optional[float] = None, mean=None, std_dev=None):
+def gauss(
+    m: int,
+    n: int,
+    a: Optional[float] = None,
+    b: Optional[float] = None,
+    mean: Optional[float] = None,
+    std_dev: Optional[float] = None,
+) -> Any:
     """
-    Generate a random array of size m by n sampled from a Gaussian distribution.
+    Generate a random array of size m by n sampled from a Gaussian
+    distribution.
 
     Parameters:
     - a: The lower-bound cutoff for the distribution sampling
@@ -32,9 +40,11 @@ def gauss(m: int, n: int, a: Optional[float] = None, b: Optional[float] = None, 
     - std_dev: the standard deviation of the distribution
 
     Returns:
-    - An array of shape (m, n) containing random samples from the Gaussian distribution.
+    - An array of shape (m, n) containing random samples from the
+    Gaussian distribution.
 
-    Authors: Priyadarshan (priyada@purdue.edu), Alex Lee (alexlee5124@gmail.com)
+    Authors: Priyadarshan (priyada@purdue.edu),
+             Alex Lee (alexlee5124@gmail.com)
     Date: 12/12/2024
     """
     if (a is None or b is None) and (mean is None or std_dev is None):
@@ -50,14 +60,16 @@ def gauss(m: int, n: int, a: Optional[float] = None, b: Optional[float] = None, 
         mean = (a + b) / 2.0
         std_dev = (b - mean) / 2.58
 
-    # Generate a random sample from the Gaussian distribution with specified mean and std_dev
+    # Generate a random sample from the Gaussian distribution with
+    # specified mean and std_dev
     np.random.seed(seed=int(time.time()))
     return np.random.normal(loc=mean, scale=std_dev, size=(m, n)).tolist()
 
 
-def trirnd(a: float, c: float, m: int, n: int, mode=None):
+def trirnd(a: float, c: float, m: int, n: int, mode: Optional[float] = None) -> Any:
     """
-    Generate a random array of size m by n sampled from a Gaussian distribution.
+    Generate a random array of size m by n sampled from a triangular
+    distribution.
 
     Parameters:
     - a: The lower-bound cutoff for the distribution sampling
@@ -71,7 +83,8 @@ def trirnd(a: float, c: float, m: int, n: int, mode=None):
     Returns:
     - An m x n matrix with values sampled from the triangular distribution.
 
-    Authors: Priyadarshan (priyada@purdue.edu), Alex Lee (alexlee5124@gmail.com)
+    Authors: Priyadarshan (priyada@purdue.edu),
+             Alex Lee (alexlee5124@gmail.com)
     Date: 12/12/2024
     """
     if a >= c:
@@ -82,14 +95,16 @@ def trirnd(a: float, c: float, m: int, n: int, mode=None):
     if (mode < a) or (mode > c):
         raise ValueError(TRIRND_INVALID_PEAK_MSG)
 
-    # Generate a random sample from a triangular distribution with specified lower bound, mode, and upper bound
+    # Generate a random sample from a triangular distribution with
+    # specified lower bound, mode, and upper bound
     np.random.seed(seed=int(time.time()))
     return np.random.triangular(a, mode, c, size=(m, n)).tolist()
 
 
-def uniform(a, b):
+def uniform(a: float, b: float) -> float:
     """
-    Picks a random number from a uniform distribution between lower_bound and upper_bound.
+    Picks a random number from a uniform distribution between
+    lower_bound and upper_bound.
 
     Parameters:
     - a (float): The lower bound of the range.
@@ -101,6 +116,7 @@ def uniform(a, b):
     if a >= b:
         raise ValueError(UNIFORM_INVALID_BOUNDS_MSG)
 
-    # Generate a random sample from a uniform distribution with specified lower bound and upper bound
+    # Generate a random sample from a uniform distribution with
+    # specified lower bound and upper bound
     np.random.seed(seed=int(time.time()))
     return np.random.uniform(a, b)
