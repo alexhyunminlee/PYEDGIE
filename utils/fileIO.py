@@ -188,7 +188,7 @@ def importWeather(
     try:
         timeZoneCorrection = int(weatherDF.pop("utc_offset (hrs)")[0])
     except Exception:
-        print("Error occurred in finding thetimezone offset")
+        print("ERROR [importWeather()]: Error occurred in finding the timezone offset")
     weatherDF.index = weatherDF.index + pd.Timedelta(hours=timeZoneCorrection)
 
     # Convert to appropriate data types
