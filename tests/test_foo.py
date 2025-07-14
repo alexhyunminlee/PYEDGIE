@@ -1,4 +1,4 @@
-from pyedgie.foo import foo
+from src.pyedgie.foo import foo
 
 
 def test_foo():
