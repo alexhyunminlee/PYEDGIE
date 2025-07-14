@@ -122,5 +122,4 @@ skip_empty = true
 branch = true
 source = ["src"]
 
-[tool.deptry]
-source_code_paths = ["src", "utils"]
+
