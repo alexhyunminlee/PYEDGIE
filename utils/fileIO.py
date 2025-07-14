@@ -122,7 +122,9 @@ def _validate_datetime_range(weatherDF: Any, start: Union[datetime, None], end: 
         raise ValueError()
 
 
-def _resample_weather_data(weatherDF: Any, start: Union[datetime, None], end: Union[datetime, None], timeWindow: timedelta) -> Any:
+def _resample_weather_data(
+    weatherDF: Any, start: Union[datetime, None], end: Union[datetime, None], timeWindow: timedelta
+) -> Any:
     """Resample weather data to specified time window."""
     # Resample the weather data to start at start date and end at end date
     if start not in weatherDF.index:
@@ -153,7 +155,10 @@ def _resample_weather_data(weatherDF: Any, start: Union[datetime, None], end: Un
 
 
 def importWeather(
-    file_path: str, start: Union[datetime, None] = None, end: Union[datetime, None] = None, timeWindow: Union[timedelta, None] = None
+    file_path: str,
+    start: Union[datetime, None] = None,
+    end: Union[datetime, None] = None,
+    timeWindow: Union[timedelta, None] = None,
 ) -> Any:
     """
     Reads the weather file. The weather file is to be downloaded from Oikolab
