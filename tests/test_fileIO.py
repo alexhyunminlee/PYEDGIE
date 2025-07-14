@@ -103,3 +103,27 @@ def test_resample_weather_data():
     # Check interpolation
     assert resampled.loc[pd.Timestamp("2023-01-01 00:00:00"), "temp"] == 10
     assert resampled.loc[pd.Timestamp("2023-01-01 01:00:00"), "temp"] == 50
+
+
+def test_import_weather():
+    # Use the existing TexasWeather1.csv file
+    file_path = "data/TexasWeather1.csv"
+
+    # Call importWeather
+    df = fileIO.importWeather(file_path)
+
+    # Check output DataFrame
+    assert isinstance(df, pd.DataFrame)
+    assert "temperature (degC)" in df.columns
+    assert "wind_speed (m/s)" in df.columns
+    assert "relative_humidity (0-1)" in df.columns
+    assert "surface_solar_radiation_kW_per_m2" in df.columns
+    assert "direct_normal_solar_kW_per_m2" in df.columns
+    assert "surface_diffuse_solar_kW_per_m2" in df.columns
+
+    # Check that the data has been processed correctly
+    assert len(df) > 0
+    assert df.index.dtype == "datetime64[ns]"
+    assert df["temperature (degC)"].dtype == "float64"
+    assert df["wind_speed (m/s)"].dtype == "float64"
+    assert df["relative_humidity (0-1)"].dtype == "float64"
