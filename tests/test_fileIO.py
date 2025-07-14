@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import pandas as pd
 import pytest
 
@@ -66,10 +68,6 @@ def test_process_weather_data_types():
 
 
 def test_validate_datetime_range():
-    from datetime import datetime
-
-    import pandas as pd
-
     # Create a sample DataFrame with datetime index
     dates = pd.date_range("2023-01-01", periods=5, freq="H")
     df = pd.DataFrame({"temp": [20, 21, 22, 23, 24]}, index=dates)
@@ -90,3 +88,18 @@ def test_validate_datetime_range():
     end = datetime(2023, 1, 1, 1, 0)
     with pytest.raises(ValueError):
         fileIO._validate_datetime_range(df, start, end)
+
+
+def test_resample_weather_data():
+    # Create a DataFrame with 15-minutely data
+    idx = pd.date_range("2023-01-01 00:00", periods=5, freq="15min")
+    df = pd.DataFrame({"temp": [10, 20, 30, 40, 50]}, index=idx, dtype=float)
+    start = datetime.fromisoformat(str(idx[0]))
+    end = datetime.fromisoformat(str(idx[-1]))
+    # Resample to hourly
+    resampled = fileIO._resample_weather_data(df, start, end, timedelta(hours=1))
+    # Should have 2 rows: 00:00 and 01:00
+    assert list(resampled.index) == [pd.Timestamp("2023-01-01 00:00:00"), pd.Timestamp("2023-01-01 01:00:00")]
+    # Check interpolation
+    assert resampled.loc[pd.Timestamp("2023-01-01 00:00:00"), "temp"] == 10
+    assert resampled.loc[pd.Timestamp("2023-01-01 01:00:00"), "temp"] == 50
