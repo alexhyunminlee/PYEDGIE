@@ -1,7 +1,7 @@
 import csv
 import os
 from datetime import datetime, timedelta
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
@@ -106,7 +106,7 @@ def _process_weather_data_types(weatherDF: Any) -> Any:
     return weatherDF
 
 
-def _validate_datetime_range(weatherDF: Any, start: datetime | None, end: datetime | None) -> None:
+def _validate_datetime_range(weatherDF: Any, start: Union[datetime, None], end: Union[datetime, None]) -> None:
     """Validate start and end datetime ranges."""
     if start is None or end is None:
         raise ValueError()
@@ -122,7 +122,7 @@ def _validate_datetime_range(weatherDF: Any, start: datetime | None, end: dateti
         raise ValueError()
 
 
-def _resample_weather_data(weatherDF: Any, start: datetime | None, end: datetime | None, timeWindow: timedelta) -> Any:
+def _resample_weather_data(weatherDF: Any, start: Union[datetime, None], end: Union[datetime, None], timeWindow: timedelta) -> Any:
     """Resample weather data to specified time window."""
     # Resample the weather data to start at start date and end at end date
     if start not in weatherDF.index:
@@ -153,7 +153,7 @@ def _resample_weather_data(weatherDF: Any, start: datetime | None, end: datetime
 
 
 def importWeather(
-    file_path: str, start: datetime | None = None, end: datetime | None = None, timeWindow: timedelta | None = None
+    file_path: str, start: Union[datetime, None] = None, end: Union[datetime, None] = None, timeWindow: Union[timedelta, None] = None
 ) -> Any:
     """
     Reads the weather file. The weather file is to be downloaded from Oikolab
