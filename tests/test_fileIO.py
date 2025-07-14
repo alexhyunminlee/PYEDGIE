@@ -1,5 +1,4 @@
 from utils import fileIO
-import numpy as np
 
 
 def test_csv_to_dict():
