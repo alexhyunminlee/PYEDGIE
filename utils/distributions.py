@@ -1,5 +1,5 @@
 import time
-from typing import Any, Optional
+from typing import Any
 
 import numpy as np
 
@@ -20,10 +20,10 @@ UNIFORM_INVALID_BOUNDS_MSG = "uniform: lower bound must be strictly smaller than
 def gauss(
     m: int,
     n: int,
-    a: Optional[float] = None,
-    b: Optional[float] = None,
-    mean: Optional[float] = None,
-    std_dev: Optional[float] = None,
+    a: float | None = None,
+    b: float | None = None,
+    mean: float | None = None,
+    std_dev: float | None = None,
 ) -> Any:
     """
     Generate a random array of size m by n sampled from a Gaussian
@@ -66,7 +66,7 @@ def gauss(
     return np.random.normal(loc=mean, scale=std_dev, size=(m, n)).tolist()
 
 
-def trirnd(a: float, c: float, m: int, n: int, mode: Optional[float] = None) -> Any:
+def trirnd(a: float, c: float, m: int, n: int, mode: float | None = None) -> Any:
     """
     Generate a random array of size m by n sampled from a triangular
     distribution.
