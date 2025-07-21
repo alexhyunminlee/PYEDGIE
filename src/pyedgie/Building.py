@@ -1,7 +1,7 @@
 from ochre.Simulator import Simulator
 
 
-class Building(Simulator):
+class Building(Simulator):  # type: ignore[no-any-unimported]
     def __init__(self, name: str) -> None:
         super().__init__()
         self.name = name
