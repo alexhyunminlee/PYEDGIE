@@ -286,6 +286,47 @@ class Building(Simulator):  # type: ignore[no-any-unimported]
 
         return float(Hp_Cooling[0, 0])
 
+    def Hp_sizeheating(self, filepath: str, fullP: Any) -> float:
+        """
+        Simulate heat pump with resistance heating equipment
+        """
+
+        t1 = 1
+        R = float(self.characteristics["R"])
+        floorArea = self.characteristics["floorArea"]
+        designTempHeat = float(self.characteristics["designTempHeat"])
+
+        weather = fileIO.importWeather(filepath)
+        thetaFull = weather["temperature (degC)"]
+        solarFull = weather["surface_solar_radiation_kW_per_m2"]
+        K = len(thetaFull)
+
+        start_idx = solarFull.index[0].hour
+        end_idx = solarFull.index[0].hour + K
+        electricLoadThermalPower = fullP.iloc[
+            start_idx:end_idx
+        ]  # thermal power from electrical loads other than heat pump, kW
+        bodyThermalPower = np.array(distributions.gauss(K, t1, 0.1, 0.5))  # thermal power from body heat, kW
+        solarThermalPower = (
+            0.03
+            * np.array(distributions.gauss(K, t1, 0.9, 1.1))
+            * float(floorArea)
+            * np.array(solarFull).reshape(-1, 1)
+        )  # thermal power from sunlight, kW
+
+        qe1 = electricLoadThermalPower + bodyThermalPower + solarThermalPower
+
+        differences = abs(designTempHeat - thetaFull)
+
+        ind = np.argmin(differences)
+        # Find the index of the minimum absolute difference
+
+        Tset = (np.array(distributions.trirnd(61, 76, 1, 1)) - 32.0) * 5.0 / 9.0
+        thermalPower1 = abs((Tset - conversions.f2c(designTempHeat)) / R - np.array(qe1)[ind])
+        Hp_Heating = np.ceil(distributions.trirnd(1.2, 1.3, 1, 1) * (thermalPower1 / (0.80)))
+
+        return float(Hp_Heating[0, 0])
+
 
 if __name__ == "__main__":
     # characteristics: dict[str, float | int | str] = {
