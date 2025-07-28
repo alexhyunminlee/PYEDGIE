@@ -2,8 +2,11 @@ from datetime import datetime, timedelta
 from random import randrange
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from ochre.Simulator import Simulator
+
+from utils import conversions, distributions, fileIO
 
 
 class BuildingValidationError(ValueError):
@@ -242,6 +245,59 @@ class Building(Simulator):  # type: ignore[no-any-unimported]
         R = 1 / (modtCp / 1000 + Uwall * Aw / 1000 + Ur * areaRoof / 1000) + 1 / (h_in * Aw) + 1 / (h_out * Aw)
         self.characteristics["R"] = R
 
+    def Hp_sizecooling(self, filepath: str, fullP: Any) -> float:
+        """
+        Simulate heat pump with resistance heating equiments
+        """
+
+        t1 = 1
+        R = float(self.characteristics["R"])
+        floorArea = self.characteristics["floorArea"]
+        designTempCool = float(self.characteristics["designTempCool"])
+
+        weather = fileIO.importWeather(filepath)
+        thetaFull = weather["temperature (degC)"]
+        solarFull = weather["surface_solar_radiation_kW_per_m2"]
+        K = len(thetaFull)
+
+        start_idx = solarFull.index[0].hour
+        end_idx = solarFull.index[0].hour + K
+        electricLoadThermalPower = fullP.iloc[
+            start_idx:end_idx
+        ]  # thermal power from electrical loads other than heat pump, kW
+        bodyThermalPower = np.array(distributions.gauss(K, t1, 0.1, 0.5))  # thermal power from body heat, kW
+        solarThermalPower = (
+            0.03
+            * np.array(distributions.gauss(K, t1, 0.9, 1.1))
+            * float(floorArea)
+            * np.array(solarFull).reshape(-1, 1)
+        )  # thermal power from sunlight, kW
+
+        qe1 = electricLoadThermalPower + bodyThermalPower + solarThermalPower
+
+        differences = abs(designTempCool - thetaFull)
+
+        ind = np.argmin(differences)
+        # Find the index of the minimum absolute difference
+
+        Tset = (np.array(distributions.trirnd(61, 76, 1, 1)) - 32.0) * 5.0 / 9.0
+        thermalPower1 = abs((Tset - conversions.f2c(designTempCool)) / R - np.array(qe1)[ind])
+        Hp_Cooling = np.ceil(distributions.trirnd(1.2, 1.3, 1, 1) * (thermalPower1 / (0.80)))
+
+        return float(Hp_Cooling[0, 0])
+
 
 if __name__ == "__main__":
-    building = Building("test_building", "West", True, {})
+    # characteristics: dict[str, float | int | str] = {
+    #     "storyHeight": 3.0,
+    #     "aspectRatio": 1.0,
+    #     "numStories": 2,
+    #     "floorArea": 100.0,
+    #     "designTempCool": 75.0,
+    #     "designTempHeat": 68.0,
+    # }
+    # try:
+    #     building = Building("test_building", "West", True, characteristics)
+    # except Exception as e:
+    #     print(f"Error creating building: {e}")
+    pass

@@ -1522,6 +1522,7 @@ name = "pyedgie"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
+    { name = "numpy" },
     { name = "ochre-nrel" },
     { name = "pandas" },
 ]
@@ -1544,6 +1545,7 @@ docs = [
 
 [package.metadata]
 requires-dist = [
+    { name = "numpy", specifier = ">=1.24.0" },
     { name = "ochre-nrel", specifier = ">=0.9.1" },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
