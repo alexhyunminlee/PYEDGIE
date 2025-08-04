@@ -13,7 +13,7 @@ check: ## Run code quality tools.
 	@echo "🚀 Static type checking: Running mypy"
 	@uv run mypy
 	@echo "🚀 Checking for obsolete dependencies: Running deptry"
-	@uv run deptry PYEDGIE --ignore DEP001,DEP002 --pep621-dev-dependency-groups tests
+	@uv run deptry PYEDGIE --ignore DEP001,DEP002
 
 .PHONY: test
 test: ## Test the code with pytest

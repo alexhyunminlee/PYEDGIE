@@ -1689,15 +1689,11 @@ dependencies = [
     { name = "pandas" },
 ]
 
-[package.optional-dependencies]
-tests = [
-    { name = "openpyxl" },
-]
-
 [package.dev-dependencies]
 dev = [
     { name = "deptry" },
     { name = "mypy" },
+    { name = "openpyxl" },
     { name = "pre-commit" },
     { name = "pytest" },
     { name = "pytest-cov" },
@@ -1714,15 +1710,14 @@ docs = [
 requires-dist = [
     { name = "numpy", specifier = ">=1.24.0" },
     { name = "ochre-nrel", specifier = ">=0.9.1" },
-    { name = "openpyxl", marker = "extra == 'tests'", specifier = ">=3.1.5" },
     { name = "pandas", specifier = ">=2.0.0" },
 ]
-provides-extras = ["tests"]
 
 [package.metadata.requires-dev]
 dev = [
     { name = "deptry", specifier = ">=0.23.0" },
     { name = "mypy", specifier = ">=0.991" },
+    { name = "openpyxl", specifier = ">=3.1.5" },
     { name = "pre-commit", specifier = ">=2.20.0" },
     { name = "pytest", specifier = ">=7.2.0" },
     { name = "pytest-cov", specifier = ">=4.0.0" },
