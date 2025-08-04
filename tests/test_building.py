@@ -179,6 +179,116 @@ class BuildingForTesting:
         R = 1 / (modtCp / 1000 + Uwall * Aw / 1000 + Ur * areaRoof / 1000) + 1 / (h_in * Aw) + 1 / (h_out * Aw)
         self.characteristics["R"] = R
 
+    def Hp_sizecooling(self, filepath: str, fullP: pd.DataFrame) -> float:
+        """Simulate heat pump with resistance heating equipment for cooling."""
+        import os
+        import sys
+
+        import numpy as np
+
+        # Add the PYEDGIE directory to the path to import utils
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from PYEDGIE.utils import conversions, distributions, fileIO
+
+        t1 = 1
+        R = float(self.characteristics["R"])
+        floorArea = self.characteristics["floorArea"]
+        designTempCool = float(self.characteristics["designTempCool"])
+
+        weather = fileIO.importWeather(filepath)
+        thetaFull = weather["temperature (degC)"]
+        solarFull = weather["surface_solar_radiation_kW_per_m2"]
+        K = len(thetaFull)
+
+        # Use the first K rows of fullP, or pad if needed
+        if len(fullP) >= K:
+            electricLoadThermalPower = fullP.iloc[:K]
+        else:
+            # Pad with zeros if fullP is shorter than K
+            padding = pd.DataFrame(
+                {"thermal_power": [0.0] * (K - len(fullP))},
+                index=pd.date_range(fullP.index[-1] + pd.Timedelta(hours=1), periods=K - len(fullP), freq="h"),
+            )
+            electricLoadThermalPower = pd.concat([fullP, padding])
+
+        bodyThermalPower = np.array(distributions.gauss(K, t1, 0.1, 0.5))  # thermal power from body heat, kW
+        solarThermalPower = (
+            0.03
+            * np.array(distributions.gauss(K, t1, 0.9, 1.1))
+            * float(floorArea)
+            * np.array(solarFull).reshape(-1, 1)
+        )  # thermal power from sunlight, kW
+
+        # Convert electricLoadThermalPower to numpy array for addition
+        electricLoadArray = np.array(electricLoadThermalPower["thermal_power"]).reshape(-1, 1)
+        qe1 = electricLoadArray + bodyThermalPower + solarThermalPower
+
+        differences = abs(designTempCool - thetaFull)
+
+        ind = np.argmin(differences)
+        # Find the index of the minimum absolute difference
+
+        Tset = (np.array(distributions.trirnd(61, 76, 1, 1)) - 32.0) * 5.0 / 9.0
+        thermalPower1 = abs((Tset - conversions.f2c(designTempCool)) / R - np.array(qe1)[ind])
+        Hp_Cooling = np.ceil(distributions.trirnd(1.2, 1.3, 1, 1) * (thermalPower1 / (0.80)))
+
+        return float(Hp_Cooling[0, 0])
+
+    def Hp_sizeheating(self, filepath: str, fullP: pd.DataFrame) -> float:
+        """Simulate heat pump with resistance heating equipment for heating."""
+        import os
+        import sys
+
+        import numpy as np
+
+        # Add the PYEDGIE directory to the path to import utils
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        from PYEDGIE.utils import conversions, distributions, fileIO
+
+        t1 = 1
+        R = float(self.characteristics["R"])
+        floorArea = self.characteristics["floorArea"]
+        designTempHeat = float(self.characteristics["designTempHeat"])
+
+        weather = fileIO.importWeather(filepath)
+        thetaFull = weather["temperature (degC)"]
+        solarFull = weather["surface_solar_radiation_kW_per_m2"]
+        K = len(thetaFull)
+
+        # Use the first K rows of fullP, or pad if needed
+        if len(fullP) >= K:
+            electricLoadThermalPower = fullP.iloc[:K]
+        else:
+            # Pad with zeros if fullP is shorter than K
+            padding = pd.DataFrame(
+                {"thermal_power": [0.0] * (K - len(fullP))},
+                index=pd.date_range(fullP.index[-1] + pd.Timedelta(hours=1), periods=K - len(fullP), freq="h"),
+            )
+            electricLoadThermalPower = pd.concat([fullP, padding])
+
+        bodyThermalPower = np.array(distributions.gauss(K, t1, 0.1, 0.5))  # thermal power from body heat, kW
+        solarThermalPower = (
+            0.03
+            * np.array(distributions.gauss(K, t1, 0.9, 1.1))
+            * float(floorArea)
+            * np.array(solarFull).reshape(-1, 1)
+        )  # thermal power from sunlight, kW
+
+        # Convert electricLoadThermalPower to numpy array for addition
+        electricLoadArray = np.array(electricLoadThermalPower["thermal_power"]).reshape(-1, 1)
+        qe1 = electricLoadArray + bodyThermalPower + solarThermalPower
+
+        differences = abs(designTempHeat - thetaFull)
+
+        ind = np.argmin(differences)
+        # Find the index of the minimum absolute difference
+
+        Tset = (np.array(distributions.trirnd(61, 76, 1, 1)) - 32.0) * 5.0 / 9.0
+        thermalPower1 = abs((Tset - conversions.f2c(designTempHeat)) / R - np.array(qe1)[ind])
+        Hp_Heating = np.ceil(distributions.trirnd(1.2, 1.3, 1, 1) * (thermalPower1 / (0.80)))
+
+        return float(Hp_Heating[0, 0])
+
 
 def test_generate_baseline_electricity_basic_functionality():
     """Test basic functionality of generateBaselineElectricity with real data."""
@@ -615,3 +725,399 @@ def test_generate_baseline_electricity_data_consistency():
     assert result2 is not None
     assert isinstance(result1, pd.DataFrame)
     assert isinstance(result2, pd.DataFrame)
+
+
+# =============================================================================
+# Tests for calculateR function
+# =============================================================================
+
+
+def test_calculate_r_basic_functionality():
+    """Test basic functionality of calculateR with valid inputs."""
+    characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    building = BuildingForTesting("test_building", "West", True, characteristics)
+
+    # Check that R was calculated and stored
+    assert "R" in building.characteristics
+    assert isinstance(building.characteristics["R"], float)
+    assert building.characteristics["R"] > 0
+
+
+def test_calculate_r_detached_building():
+    """Test calculateR with detached building (different wall area calculation)."""
+    characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    building = BuildingForTesting("test_building", "West", False, characteristics)
+
+    # Check that R was calculated and stored
+    assert "R" in building.characteristics
+    assert isinstance(building.characteristics["R"], float)
+    assert building.characteristics["R"] > 0
+
+
+def test_calculate_r_different_building_sizes():
+    """Test calculateR with different building sizes."""
+    base_characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    # Test with different floor areas
+    small_building = BuildingForTesting("small", "West", True, {**base_characteristics, "floorArea": 50.0})
+    large_building = BuildingForTesting("large", "West", True, {**base_characteristics, "floorArea": 200.0})
+
+    # Both should have R values calculated
+    assert "R" in small_building.characteristics
+    assert "R" in large_building.characteristics
+    assert small_building.characteristics["R"] > 0
+    assert large_building.characteristics["R"] > 0
+
+    # Larger building should have different R value (not necessarily larger due to complex calculation)
+    assert small_building.characteristics["R"] != large_building.characteristics["R"]
+
+
+def test_calculate_r_different_aspect_ratios():
+    """Test calculateR with different aspect ratios."""
+    base_characteristics = {
+        "storyHeight": 3.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    # Test with different aspect ratios
+    square_building = BuildingForTesting("square", "West", True, {**base_characteristics, "aspectRatio": 1.0})
+    rectangular_building = BuildingForTesting("rectangular", "West", True, {**base_characteristics, "aspectRatio": 2.0})
+
+    # Both should have R values calculated
+    assert "R" in square_building.characteristics
+    assert "R" in rectangular_building.characteristics
+    assert square_building.characteristics["R"] > 0
+    assert rectangular_building.characteristics["R"] > 0
+
+
+def test_calculate_r_different_story_heights():
+    """Test calculateR with different story heights."""
+    base_characteristics = {
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    # Test with different story heights
+    low_building = BuildingForTesting("low", "West", True, {**base_characteristics, "storyHeight": 2.5})
+    high_building = BuildingForTesting("high", "West", True, {**base_characteristics, "storyHeight": 4.0})
+
+    # Both should have R values calculated
+    assert "R" in low_building.characteristics
+    assert "R" in high_building.characteristics
+    assert low_building.characteristics["R"] > 0
+    assert high_building.characteristics["R"] > 0
+
+
+def test_calculate_r_different_number_of_stories():
+    """Test calculateR with different number of stories."""
+    base_characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    # Test with different number of stories
+    single_story = BuildingForTesting("single", "West", True, {**base_characteristics, "numStories": 1})
+    multi_story = BuildingForTesting("multi", "West", True, {**base_characteristics, "numStories": 3})
+
+    # Both should have R values calculated
+    assert "R" in single_story.characteristics
+    assert "R" in multi_story.characteristics
+    assert single_story.characteristics["R"] > 0
+    assert multi_story.characteristics["R"] > 0
+
+
+# =============================================================================
+# Tests for Hp_sizecooling function
+# =============================================================================
+
+
+def test_hp_size_cooling_basic_functionality():
+    """Test basic functionality of Hp_sizecooling with valid inputs."""
+    characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    building = BuildingForTesting("test_building", "West", True, characteristics)
+
+    # Create mock fullP data (thermal power from electrical loads)
+    mock_fullP = pd.DataFrame(
+        {"thermal_power": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]},
+        index=pd.date_range("2021-06-03 20:00:00", periods=8, freq="H"),
+    )
+
+    weather_file = "data/TexasWeather1.csv"
+
+    result = building.Hp_sizecooling(weather_file, mock_fullP)
+
+    # Check that result is a positive float
+    assert isinstance(result, float)
+    assert result > 0
+
+
+def test_hp_size_cooling_different_design_temps():
+    """Test Hp_sizecooling with different design temperatures."""
+    base_characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempHeat": 68.0,
+    }
+
+    # Create mock fullP data
+    mock_fullP = pd.DataFrame(
+        {"thermal_power": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]},
+        index=pd.date_range("2021-06-03 20:00:00", periods=8, freq="H"),
+    )
+
+    weather_file = "data/TexasWeather1.csv"
+
+    # Test with different cooling design temperatures
+    cool_70 = BuildingForTesting("cool_70", "West", True, {**base_characteristics, "designTempCool": 70.0})
+    cool_80 = BuildingForTesting("cool_80", "West", True, {**base_characteristics, "designTempCool": 80.0})
+
+    result_70 = cool_70.Hp_sizecooling(weather_file, mock_fullP)
+    result_80 = cool_80.Hp_sizecooling(weather_file, mock_fullP)
+
+    # Both should return positive values
+    assert result_70 > 0
+    assert result_80 > 0
+
+
+def test_hp_size_cooling_different_floor_areas():
+    """Test Hp_sizecooling with different floor areas."""
+    base_characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    # Create mock fullP data
+    mock_fullP = pd.DataFrame(
+        {"thermal_power": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]},
+        index=pd.date_range("2021-06-03 20:00:00", periods=8, freq="H"),
+    )
+
+    weather_file = "data/TexasWeather1.csv"
+
+    # Test with different floor areas
+    small_building = BuildingForTesting("small", "West", True, {**base_characteristics, "floorArea": 50.0})
+    large_building = BuildingForTesting("large", "West", True, {**base_characteristics, "floorArea": 200.0})
+
+    result_small = small_building.Hp_sizecooling(weather_file, mock_fullP)
+    result_large = large_building.Hp_sizecooling(weather_file, mock_fullP)
+
+    # Both should return positive values
+    assert result_small > 0
+    assert result_large > 0
+
+
+def test_hp_size_cooling_file_not_found():
+    """Test Hp_sizecooling with non-existent weather file."""
+    characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    building = BuildingForTesting("test_building", "West", True, characteristics)
+
+    # Create mock fullP data
+    mock_fullP = pd.DataFrame(
+        {"thermal_power": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]},
+        index=pd.date_range("2021-06-03 20:00:00", periods=8, freq="H"),
+    )
+
+    # Test with non-existent file
+    with pytest.raises(ValueError):
+        building.Hp_sizecooling("nonexistent_file.csv", mock_fullP)
+
+
+# =============================================================================
+# Tests for Hp_sizeheating function
+# =============================================================================
+
+
+def test_hp_size_heating_basic_functionality():
+    """Test basic functionality of Hp_sizeheating with valid inputs."""
+    characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    building = BuildingForTesting("test_building", "West", True, characteristics)
+
+    # Create mock fullP data (thermal power from electrical loads)
+    mock_fullP = pd.DataFrame(
+        {"thermal_power": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]},
+        index=pd.date_range("2021-06-03 20:00:00", periods=8, freq="H"),
+    )
+
+    weather_file = "data/TexasWeather1.csv"
+
+    result = building.Hp_sizeheating(weather_file, mock_fullP)
+
+    # Check that result is a positive float
+    assert isinstance(result, float)
+    assert result > 0
+
+
+def test_hp_size_heating_different_design_temps():
+    """Test Hp_sizeheating with different design temperatures."""
+    base_characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+    }
+
+    # Create mock fullP data
+    mock_fullP = pd.DataFrame(
+        {"thermal_power": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]},
+        index=pd.date_range("2021-06-03 20:00:00", periods=8, freq="H"),
+    )
+
+    weather_file = "data/TexasWeather1.csv"
+
+    # Test with different heating design temperatures
+    heat_60 = BuildingForTesting("heat_60", "West", True, {**base_characteristics, "designTempHeat": 60.0})
+    heat_75 = BuildingForTesting("heat_75", "West", True, {**base_characteristics, "designTempHeat": 75.0})
+
+    result_60 = heat_60.Hp_sizeheating(weather_file, mock_fullP)
+    result_75 = heat_75.Hp_sizeheating(weather_file, mock_fullP)
+
+    # Both should return positive values
+    assert result_60 > 0
+    assert result_75 > 0
+
+
+def test_hp_size_heating_different_floor_areas():
+    """Test Hp_sizeheating with different floor areas."""
+    base_characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    # Create mock fullP data
+    mock_fullP = pd.DataFrame(
+        {"thermal_power": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]},
+        index=pd.date_range("2021-06-03 20:00:00", periods=8, freq="H"),
+    )
+
+    weather_file = "data/TexasWeather1.csv"
+
+    # Test with different floor areas
+    small_building = BuildingForTesting("small", "West", True, {**base_characteristics, "floorArea": 50.0})
+    large_building = BuildingForTesting("large", "West", True, {**base_characteristics, "floorArea": 200.0})
+
+    result_small = small_building.Hp_sizeheating(weather_file, mock_fullP)
+    result_large = large_building.Hp_sizeheating(weather_file, mock_fullP)
+
+    # Both should return positive values
+    assert result_small > 0
+    assert result_large > 0
+
+
+def test_hp_size_heating_file_not_found():
+    """Test Hp_sizeheating with non-existent weather file."""
+    characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    building = BuildingForTesting("test_building", "West", True, characteristics)
+
+    # Create mock fullP data
+    mock_fullP = pd.DataFrame(
+        {"thermal_power": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]},
+        index=pd.date_range("2021-06-03 20:00:00", periods=8, freq="H"),
+    )
+
+    # Test with non-existent file
+    with pytest.raises(ValueError):
+        building.Hp_sizeheating("nonexistent_file.csv", mock_fullP)
+
+
+def test_hp_size_heating_vs_cooling_comparison():
+    """Test that heating and cooling sizes are calculated correctly for same building."""
+    characteristics = {
+        "storyHeight": 3.0,
+        "aspectRatio": 1.0,
+        "numStories": 2,
+        "floorArea": 100.0,
+        "designTempCool": 75.0,
+        "designTempHeat": 68.0,
+    }
+
+    building = BuildingForTesting("test_building", "West", True, characteristics)
+
+    # Create mock fullP data
+    mock_fullP = pd.DataFrame(
+        {"thermal_power": [0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2]},
+        index=pd.date_range("2021-06-03 20:00:00", periods=8, freq="H"),
+    )
+
+    weather_file = "data/TexasWeather1.csv"
+
+    cooling_size = building.Hp_sizecooling(weather_file, mock_fullP)
+    heating_size = building.Hp_sizeheating(weather_file, mock_fullP)
+
+    # Both should return positive values
+    assert cooling_size > 0
+    assert heating_size > 0
+
+    # They should be different values (heating and cooling have different requirements)
+    assert cooling_size != heating_size
