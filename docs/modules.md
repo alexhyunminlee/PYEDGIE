@@ -1,1 +1,1 @@
-::: pyedgie.foo
+::: PYEDGIE.foo

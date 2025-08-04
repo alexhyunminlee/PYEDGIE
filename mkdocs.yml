@@ -15,7 +15,7 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
-          paths: ["src/pyedgie"]
+          paths: ["PYEDGIE"]
 theme:
   name: material
   feature:
