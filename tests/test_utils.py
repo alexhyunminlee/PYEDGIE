@@ -1,7 +1,7 @@
 import os
 import sys
 
-from utils.conversions import btu2wh, c2f, f2c
+from PYEDGIE.utils.conversions import btu2wh, c2f, f2c
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
