@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 from ochre.Simulator import Simulator
 
-from utils import conversions, distributions, fileIO
+from .utils import conversions, distributions, fileIO
 
 
 class BuildingValidationError(ValueError):
