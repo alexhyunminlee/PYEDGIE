@@ -1,10 +1,19 @@
 import csv
+import importlib.util
 import os
 from datetime import datetime, timedelta
 from typing import Any
 
 import numpy as np
 import pandas as pd
+
+# Get the PYEDGIE directory using importlib
+pyedgie_spec = importlib.util.find_spec("PYEDGIE")
+if pyedgie_spec and pyedgie_spec.origin:
+    base_dir = os.path.dirname(pyedgie_spec.origin)
+else:
+    # Fallback to current directory if PYEDGIE module not found
+    base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 def csv_to_dict(file_path: str) -> list[dict]:
@@ -153,7 +162,10 @@ def _resample_weather_data(weatherDF: Any, start: datetime | None, end: datetime
 
 
 def importWeather(
-    file_path: str, start: datetime | None = None, end: datetime | None = None, timeWindow: timedelta | None = None
+    file_path: str,
+    start: datetime | None = None,
+    end: datetime | None = None,
+    timeWindow: timedelta | None = None,
 ) -> Any:
     """
     Reads the weather file. The weather file is to be downloaded from Oikolab
@@ -206,6 +218,7 @@ def importWeather(
     weatherDF = _resample_weather_data(weatherDF, start, end, timeWindow)
 
     # Export to CSV
-    weatherDF.to_csv("data.csv", index=True)
+    os.makedirs(os.path.join(base_dir, "data"), exist_ok=True)
+    weatherDF.to_csv(os.path.join(base_dir, "data", "data.csv"), index=True)
 
     return weatherDF
