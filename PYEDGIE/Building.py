@@ -420,6 +420,89 @@ class Building(Simulator):  # type: ignore[no-any-unimported]
             return None, None, heating_val_5C, heating_val_45C
         return cooling_val_95F, cooling_val_82F, heating_val_5C, heating_val_45C
 
+    def select_best_hvac_cooling(
+        self, y_target: float
+    ) -> tuple[float | None, float | None, float | None, float | None]:
+        """
+        Select the best HVAC cooling unit based on target cooling capacity
+        """
+        x_target = float(self.characteristics["designTempCool"])
+        # import hvac data
+        cooling_files = [
+            "2ton_A_cooling.csv",
+            "2ton_B_cooling.csv",
+            "3ton_C_cooling.csv",
+            "3ton_A_cooling.csv",
+            "3ton_B_cooling.csv",
+            "4ton_C_cooling.csv",
+            "4ton_A_cooling.csv",
+            "4ton_B_cooling.csv",
+            "5ton_C_cooling.csv",
+            "5ton_A_cooling.csv",
+            "5ton_B_cooling.csv",
+            "6ton_C_cooling.csv",
+            "6ton_A_cooling.csv",
+            "6ton_B_cooling.csv",
+            "7ton_C_cooling.csv",
+            "7ton_A_cooling.csv",
+            "7ton_B_cooling.csv",
+            "8ton_C_cooling.csv",
+            "8ton_A_cooling.csv",
+            "8ton_B_cooling.csv",
+        ]
+        best_curve_error = float("inf")
+        best_cooling_file = ""
+        best_cooling_data: np.ndarray | None = None
+        cooling_val_82F: float | None = None
+        cooling_val_95F: float | None = None
+
+        # --- COOLING SELECTION ---
+        for filename in cooling_files:
+            try:
+                tbl = pd.read_csv(filename)
+                if tbl.shape[1] >= 2:
+                    x = np.vectorize(conversions.f2c)(tbl.iloc[:, 0].values)
+                    y = np.vectorize(conversions.btu2wh)(tbl.iloc[:, 1].values)
+
+                    # Linear fit
+                    coeffs = np.polyfit(x, y, 1)
+                    y_pred = float(np.polyval(coeffs, x_target))
+                    error = abs(y_pred - y_target)
+
+                    # Check if this is the best cooling unit
+                    if error < best_curve_error:
+                        best_curve_error = error
+                        best_cooling_file = filename
+                        best_cooling_data = coeffs
+
+            except Exception:
+                print("Error loading %s\n", filename)
+
+        # Display selected cooling unit
+        if best_cooling_data is not None:
+            cooling_val_82F = float(np.polyval(best_cooling_data, conversions.f2c(82)))
+            cooling_val_95F = float(np.polyval(best_cooling_data, conversions.f2c(95)))
+        else:
+            print("No valid cooling data found.\n")
+            return None, None, None, None
+
+        # --- HEATING SELECTION ---
+        best_heating_file = best_cooling_file.replace("cooling", "heating")
+        try:
+            tbl = pd.read_csv(best_heating_file)
+            if tbl.shape[1] >= 2:
+                x = np.vectorize(conversions.f2c)(tbl.iloc[:, 0].values)
+                y = np.vectorize(conversions.btu2wh)(tbl.iloc[:, 1].values)
+                heating_val_5C = float(np.interp(conversions.f2c(5), x, y))
+                heating_val_45C = float(np.interp(conversions.f2c(45), x, y))
+            else:
+                print("No valid heating data found.\n")
+                return cooling_val_82F, cooling_val_95F, None, None
+        except Exception:
+            print("Error loading %s\n", best_heating_file)
+            return cooling_val_82F, cooling_val_95F, None, None
+        return cooling_val_95F, cooling_val_82F, heating_val_5C, heating_val_45C
+
 
 if __name__ == "__main__":
     # characteristics: dict[str, float | int | str] = {
