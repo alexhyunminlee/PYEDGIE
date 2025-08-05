@@ -327,6 +327,99 @@ class Building(Simulator):  # type: ignore[no-any-unimported]
 
         return float(Hp_Heating[0, 0])
 
+    def select_best_hvac_heating(
+        self, y_target: float
+    ) -> tuple[float | None, float | None, float | None, float | None]:
+        """
+        Select the best HVAC heating unit based on target heating capacity
+        """
+        x_target = float(self.characteristics["designTempHeat"])
+        # import hvac data
+        heating_files = [
+            "2ton_A_heating.csv",
+            "2ton_B_heating.csv",
+            "3ton_C_heating.csv",
+            "3ton_A_heating.csv",
+            "3ton_B_heating.csv",
+            "4ton_C_heating.csv",
+            "4ton_A_heating.csv",
+            "4ton_B_heating.csv",
+            "5ton_C_heating.csv",
+            "5ton_A_heating.csv",
+            "5ton_B_heating.csv",
+            "6ton_C_heating.csv",
+            "6ton_A_heating.csv",
+            "6ton_B_heating.csv",
+            "7ton_C_heating.csv",
+            "7ton_A_heating.csv",
+            "7ton_B_heating.csv",
+            "8ton_C_heating.csv",
+            "8ton_A_heating.csv",
+            "8ton_B_heating.csv",
+        ]
+
+        # Temperature range for heating
+        temp_min_heating = conversions.f2c(5)
+        temp_max_heating = conversions.f2c(48)
+
+        # Initialize best heating unit selection
+        best_curve_error = float("inf")
+        best_heating_file = ""
+        best_heating_data: np.ndarray | None = None
+        heating_val_5C: float | None = None
+        heating_val_45C: float | None = None
+
+        # --- HEATING SELECTION ---
+        for filename in heating_files:
+            try:
+                tbl = pd.read_csv(filename)
+                if tbl.shape[1] >= 2:
+                    x = np.vectorize(conversions.f2c)(tbl.iloc[:, 0].values)
+                    y = np.vectorize(conversions.btu2wh)(tbl.iloc[:, 1].values)
+                    valid_idx = (x >= temp_min_heating) & (x <= temp_max_heating)
+                    x = x[valid_idx]
+                    y = y[valid_idx]
+
+                    # Linear fit
+                    if len(x) > 1:
+                        coeffs = np.polyfit(x, y, 1)
+                        y_pred = float(np.polyval(coeffs, x_target))
+                        error = abs(y_pred - y_target)
+
+                        # Check if this is the best heating unit
+                        if error < best_curve_error:
+                            best_curve_error = error
+                            best_heating_file = filename
+                            best_heating_data = coeffs
+
+            except Exception:
+                print("Error loading %s\n", filename)
+
+        # Display selected heating unit
+        if best_heating_data is not None:
+            heating_val_5C = float(np.polyval(best_heating_data, conversions.f2c(5)))
+            heating_val_45C = float(np.polyval(best_heating_data, conversions.f2c(45)))
+        else:
+            print("No valid heating data found.\n")
+            return None, None, None, None
+
+        # --- COOLING SELECTION ---
+        best_cooling_file = best_heating_file.replace("heating", "cooling")
+        try:
+            tbl = pd.read_csv(best_cooling_file)
+            if tbl.shape[1] >= 2:
+                x = np.vectorize(conversions.f2c)(tbl.iloc[:, 0].values)
+                y = np.vectorize(conversions.btu2wh)(tbl.iloc[:, 1].values)
+                cooling_val_82F = float(np.interp(conversions.f2c(82), x, y))
+                cooling_val_95F = float(np.interp(conversions.f2c(95), x, y))
+            else:
+                print("No valid cooling data found.\n")
+                return None, None, heating_val_5C, heating_val_45C
+        except Exception:
+            print("Error loading %s\n", best_cooling_file)
+            return None, None, heating_val_5C, heating_val_45C
+        return cooling_val_95F, cooling_val_82F, heating_val_5C, heating_val_45C
+
 
 if __name__ == "__main__":
     # characteristics: dict[str, float | int | str] = {
